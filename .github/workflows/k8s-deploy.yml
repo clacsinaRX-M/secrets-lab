@@ -1,0 +1,40 @@
+name: deploy-to-k8s
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Select the environment
+        required: true
+        options:
+          - blue
+          - green
+
+jobs:
+  deploy-static-manifests:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Set up kubeconfig
+        uses: azure/k8s-set-context@v4
+        with:
+          method: service-account
+          k8s-url: https://54.215.189.237:6443   #Add your cluster URL
+          k8s-secret: |
+            ${{ secrets.SA_TOKEN }}
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Deploy manifests
+        uses: azure/k8s-deploy@v4
+        with:
+          action: deploy
+          manifests: |
+              manifests/dep.yaml
+              manifests/svc.yaml
+          namespace: ${{ inputs.environment }}
+          pull-images: false
